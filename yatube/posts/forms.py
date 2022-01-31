@@ -10,6 +10,6 @@ class PostForm(forms.ModelForm):
         fields = ('text', 'group')
         widgets = {'text': forms.Textarea(attrs={'cols': 103, 'rows': 20})}
         labels = {'text': 'Введите текст нового поста',
-                  'group': 'Выберите группу, '
-                           'к которой будет относиться ваш пост'}
+                  'group': 'Выберите группу'}
+        help_texts = {'group': 'К этой группе будет относиться ваш пост'}
         validators = {'text': clean_text}

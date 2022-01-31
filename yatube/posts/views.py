@@ -40,7 +40,7 @@ def profile(request, username):
     paginator = Paginator(post_list, settings.SHOW_POSTS)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    post_count = Post.objects.filter(author=author).count()
+    post_count = author.posts.count()
     context = {
         'author': author,
         'page_obj': page_obj,
@@ -60,32 +60,29 @@ def post_detail(request, post_id):
 @login_required
 def post_create(request):
     template = 'posts/post_create.html'
+    form = PostForm(request.POST or None)
     if request.method == 'POST':
-        form = PostForm(request.POST)
         if form.is_valid():
             text = form.cleaned_data['text']
             group = form.cleaned_data['group']
             author = request.user
-            post = Post.objects.create(text=text, group=group, author=author)
+            post = form.save(commit=False)
+            post.author = author
             post.save()
             username = author.username
             return redirect('posts:profile', username)
         return render(request, template, {'form': form})
-    form = PostForm()
     return render(request, template, {'form': form})
 
 
 @login_required
 def post_edit(request, post_id):
     template = 'posts/post_create.html'
+    post = Post.objects.get(pk=post_id)
+    form = PostForm(request.POST or None, instance=post)
     if request.method == 'POST':
-        post = Post.objects.get(pk=post_id)
-        form = PostForm(request.POST or None, instance=post)
-        if form.is_valid():
+        if request.user == post.author:
             form.save()
             return redirect('posts:post_detail', post_id)
         return render(request, template, {'form': form})
-    post = Post.objects.get(pk=post_id)
-    form = PostForm(request.POST or None, instance=post)
-    is_edit = True
-    return render(request, template, {'form': form, 'is_edit': is_edit})
+    return render(request, template, {'form': form})
