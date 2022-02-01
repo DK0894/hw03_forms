@@ -8,7 +8,7 @@ class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         fields = ('text', 'group')
-        widgets = {'text': forms.Textarea(attrs={'cols': 103, 'rows': 20})}
+        widgets = {'text': forms.Textarea}
         labels = {'text': 'Введите текст нового поста',
                   'group': 'Выберите группу'}
         help_texts = {'group': 'К этой группе будет относиться ваш пост'}
