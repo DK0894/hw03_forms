@@ -71,4 +71,10 @@ def post_edit(request, post_id):
             return redirect('posts:post_detail', post_id)
         form.save()
         return redirect('posts:post_detail', post_id)
-    return render(request, 'posts/post_create.html', {'form': form})
+    return render(
+        request, 'posts/post_create.html',
+        {
+            'form': form,
+            'post': post
+        }
+    )
