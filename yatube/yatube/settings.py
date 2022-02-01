@@ -8,7 +8,7 @@ SECRET_KEY = 'bckxf+=g%)jf&d^2&c8xduda++$wm%@!i4lc77^===+df&y+e9'
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'posts.apps.PostsConfig',
