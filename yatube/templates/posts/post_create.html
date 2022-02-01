@@ -14,7 +14,7 @@
             Добавить запись
           {% endif %}
         </div>
-        <form method="post">
+        <form method="post" action="{% url 'posts:post_create' %}">
           {% csrf_token %}
           {{ form.as_p }}
           <button type="submit" class="btn btn-primary">
