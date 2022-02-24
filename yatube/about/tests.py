@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
+from http import HTTPStatus
 
 
 User = get_user_model()
@@ -14,8 +15,19 @@ class UserURLTest(TestCase):
         # Создан неавторизованный клиент
         self.guest_client = Client()
 
-    def test_about_url_exists_at_desired_location(self):
-        """Проверка доступности адреса /about/author/ и /about/tech/."""
+    def test_about_exists_at_desired_location(self):
+        """Проверка доступности адресов /about/author/ и /about/tech/."""
+        url_path = {
+            '/about/author/': HTTPStatus.OK,
+            '/about/tech/': HTTPStatus.OK,
+        }
+        for url, status_page in url_path.items():
+            with self.subTest(url=url):
+                response = self.guest_client.get(url)
+                self.assertEqual(response.status_code, status_page)
+
+    def test_about_url_urls_uses_correct_template(self):
+        """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {
             'about/author.html': '/about/author/',
             'about/tech.html': '/about/tech/',

@@ -11,58 +11,81 @@ class UserURLTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Group.objects.create(
+        cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test_slug',
             description='Тестовое описание',
         )
-        Post.objects.create(
-            author=User.objects.create_user(username='auth'),
-            text='test_text'
-        )
+        # cls.post = Post.objects.create(
+        #     author=User.objects.create_user(username='auth'),
+        #     text='test_text',
+        # )
 
     def setUp(self):
-        # Создан неавторизованный клиент
+        # Создаем неавторизованный пользователя
         self.guest_client = Client()
-        # Создан пользователь
+        # Создаем авторизованного пользователя
         self.user = User.objects.create_user(username='Test_username')
-        # Создан второй клиент
         self.authorized_client = Client()
-        # Авторизация пользователя
         self.authorized_client.force_login(self.user)
+        self.post = Post.objects.create(
+            author=self.user,
+            text='test_text',
+        )
 
-    # def test_main_page(self):
-    #     """Страница / доступна любому пользователю."""
-    #     # Отправляем запрос через client,
-    #     # созданный в setUp()
-    #     response = self.guest_client.get('/')
-    #     self.assertEqual(response.status_code, 200)
-    #
-    # def test_group_list_page(self):
-    #     """Страница /group/slug/ доступна любому пользователю."""
-    #     response = self.guest_client.get('/group/test_slug/')
-    #     self.assertEqual(response.status_code, 200)
-    #
-    # def test_profile_page(self):
-    #     """Страница /profile/username/ доступна любому пользователю."""
-    #     response = self.guest_client.get('/profile/Test_username/')
-    #     self.assertEqual(response.status_code, 200)
-    #
-    # def test_post_detail_page(self):
-    #     """Страница /posts/post_id/ доступна любому пользователю."""
-    #     response = self.guest_client.get('posts/test_id/')
-    #     self.assertEqual(response.status_code, 200)
-
-    def test_some_pages_for_guest_clients(self):
-        """Страницы доступны любому пользователю."""
+    def test_pages_exists_at_desired_location(self):
+        """Страницы доступны любому пользователю.
+        Если страница не существует ответ 404."""
+        post = self.post
         url_path = {
             '/': HTTPStatus.OK,
             '/group/test_slug/': HTTPStatus.OK,
             '/profile/Test_username/': HTTPStatus.OK,
-            f'/posts/{1}/': HTTPStatus.OK,
+            f'/posts/{post.pk}/': HTTPStatus.OK,
             '/unexisting_page/': HTTPStatus.NOT_FOUND,
         }
         for url, status_page in url_path.items():
             with self.subTest(url=url):
                 response = self.guest_client.get(url)
                 self.assertEqual(response.status_code, status_page)
+
+    def test_post_edit_exists_at_desired_location_author(self):
+        """Редактирование поста доступно только автору."""
+        post = self.post
+        response = self.authorized_client.get(f'/posts/{post.pk}/edit/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test__post_create_exists_at_desired_location_authorized(self):
+        """Создание поста доступно только авторизавынному пользователю."""
+        response = self.authorized_client.get('/create/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_redirect_not_authorized_client(self):
+        """Перенаправляет анонимного пользователя со страниц создания
+         и редактирования поста на страницу /login/."""
+        post = self.post
+        url_path = {
+            '/create/': '/auth/login/?next=/create/',
+            f'/posts/{post.pk}/edit/':
+                f'/auth/login/?next=/posts/{post.pk}/edit/',
+        }
+        for url, redirect in url_path.items():
+            with self.subTest(url=url):
+                response = self.guest_client.get(url, follow=True)
+                self.assertRedirects(response, redirect)
+
+    def test_urls_uses_correct_template(self):
+        """URL-адрес использует соответствующий шаблон."""
+        post = self.post
+        templates_url_names = {
+            '/': 'posts/index.html',
+            '/group/test_slug/': 'posts/group_list.html',
+            '/profile/Test_username/': 'posts/profile.html',
+            f'/posts/{post.pk}/': 'posts/post_detail.html',
+            '/create/': 'posts/post_create.html',
+            f'/posts/{post.pk}/edit/': 'posts/post_create.html',
+        }
+        for address, template in templates_url_names.items():
+            with self.subTest(address=address):
+                response = self.authorized_client.get(address)
+                self.assertTemplateUsed(response, template)
