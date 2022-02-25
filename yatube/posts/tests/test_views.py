@@ -34,6 +34,7 @@ class UserViewTest(TestCase):
             self.post = Post.objects.create(
                 author=self.user,
                 text='test_text',
+                pub_date=Post.pub_date
             )
 
     def test_pages_uses_correct_template(self):
@@ -58,7 +59,9 @@ class UserViewTest(TestCase):
 
     def test_main_page_correct_context(self):
         """Проверка отображения поста на странице main_page."""
-        response = self.authorized_client.get(reverse('posts:main_page'))
+        response = self.authorized_client.get(reverse('posts:main_page')
+                                              + '?page=2'
+                                              )
         first_object = response.context['page_obj'][0]
         post_objects = {
             'Test_username': f'{first_object.author.username}',
@@ -69,6 +72,9 @@ class UserViewTest(TestCase):
         for test_obj, obj in post_objects.items():
             with self.subTest(obj=obj):
                 self.assertEqual(test_obj, obj)
+        self.assertIn(
+           UserViewTest.post, response.context.get('page_obj').object_list
+        )
 
     def test_group_list_page_correct_context(self):
         """Проверка отображения поста на странцие group_list."""
@@ -83,6 +89,7 @@ class UserViewTest(TestCase):
         self.assertEqual(post.text, 'test_text')
 
     def test_profile_page_correct_context(self):
+        """Проверка отображения поста на странцие profile."""
         response = self.authorized_client.get(reverse(
             'posts:profile', args={self.post.author.username})
         )
@@ -91,8 +98,12 @@ class UserViewTest(TestCase):
         post_author = post.author
         self.assertEqual(post_author.username, 'Test_username')
         self.assertEqual(post_text, 'test_text')
+        self.assertIn(
+            post, response.context.get('page_obj').object_list
+        )
 
     def test_post_detail_correct_context(self):
+        """Проверка отображения поста на странцие post_detail."""
         response = self.authorized_client.get(
             reverse('posts:post_detail', args={self.post.pk})
         )
@@ -103,6 +114,7 @@ class UserViewTest(TestCase):
         # self.assertEqual(post.group.description, 'test_description')
 
     def test_create_post_correct_context(self):
+        """Проверка отображения поста на странцие create_post."""
         response = self.authorized_client.get(reverse('posts:post_create'))
         form_fields = {
             'text': forms.fields.CharField,
@@ -114,6 +126,7 @@ class UserViewTest(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_post_edit_correct_context(self):
+        """Проверка отображения поста на странцие post_edit."""
         response = self.authorized_client.get(
             reverse('posts:post_edit', args={self.post.pk})
         )
@@ -127,47 +140,64 @@ class UserViewTest(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_first_page_main_page_contains_ten_records(self):
-        # some_pages = {
-        #     f'{reverse("posts:main_page")}': 10,
-        #     f'{reverse("posts:group_list", args={self.group.slug})}': 10,
-        #     f'{reverse("posts:profile", args={self.post.pk})}': 10,
-        # }
-        # for page, expected in some_pages.items():
-        #     with self.subTest(page=page):
-        #         response = self.client.get(page)
-        #         self.assertEqual(len(response.context['page_obj']), 10)
+        """Проверка работы пагинатора на первой странице main_page."""
         response = self.client.get(reverse('posts:main_page'))
         self.assertEqual(len(response.context['page_obj']), 10)
 
     def test_second_page_main_page_contains_ten_records(self):
+        """Проверка работы пагинатора на второй странице main_page,
+        при создании пост на данной странице появляется.
+        """
         response = self.client.get(reverse('posts:main_page') + '?page=2')
         self.assertEqual(len(response.context['page_obj']), 5)
 
     def test_first_page_group_list_contains_ten_records(self):
+        """Проверка работы пагинатора на первой странице group_list."""
         response = self.client.get(reverse('posts:group_list',
                                            args={self.group.slug})
                                    )
         self.assertEqual(len(response.context.get('group').title), 10)
 
     def test_second_page_group_list_contains_ten_records(self):
+        """Проверка работы пагинатора на второй странице group_list."""
         response = self.client.get(reverse('posts:group_list',
                                            args={self.group.slug}) + '?page=2'
                                    )
         self.assertEqual(len(response.context.get('group').title), 10)
 
     def test_first_page_profile_contains_ten_records(self):
+        """Проверка работы пагинатора на первой странице profile."""
         response = self.client.get(reverse(
             'posts:profile', args={self.post.author.username})
         )
         self.assertEqual(len(response.context.get('page_obj')), 10)
 
     def test_second_page_profile_contains_ten_records(self):
+        """Проверка работы пагинатора на второй странице profile,
+        при создании пост на данной странице появляется.
+        """
         response = self.client.get(reverse(
             'posts:profile', args={self.post.author.username}) + '?page=2'
         )
         self.assertEqual(len(response.context.get('page_obj')), 4)
 
-    def test_additional_check_create_post(self):
-        post = Post.objects.create(
-
+    def test_additional_check_create_post_group_list(self):
+        """Проверка, что при создании поста,
+        этот пост появляется на странице group_list И не попал в группу,
+        для которой не был предназначен.
+        """
+        group_1 = Group.objects.create(
+            title='test_group_1',
+            slug='test_slug_1',
+            description='test_description_!',
         )
+        response_1 = self.authorized_client.get(
+            reverse('posts:group_list', args={self.group.slug})
+        )
+        response_2 = self.authorized_client.get(
+            reverse('posts:group_list', args={group_1.slug})
+        )
+        obj = response_1.context.get('page_obj').object_list
+        obj_2 = response_2.context.get('page_obj').object_list
+        self.assertIn(UserViewTest.post, obj)
+        self.assertNotIn(UserViewTest.post, obj_2)
