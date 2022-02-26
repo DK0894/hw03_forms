@@ -3,7 +3,6 @@ from django.test import TestCase
 
 from ..models import Group, Post
 
-
 User = get_user_model()
 
 
@@ -17,9 +16,12 @@ class UserModelTest(TestCase):
             slug='Тестовый slug',
             description='Тестовое описание',
         )
+        cls.test_user = User.objects.create_user(
+            username='Test_username')
         cls.post = Post.objects.create(
-            author=cls.user,
-            text='Тестовый пост',
+            text='test_text',
+            author=User.objects.get(username='Test_username'),
+            group=UserModelTest.group
         )
 
     def test_models_correct_object_names(self):

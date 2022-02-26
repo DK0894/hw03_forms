@@ -1,7 +1,7 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase, Client
-from django.urls import reverse
 from django import forms
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
 
 from ..models import Group, Post
 
@@ -17,17 +17,19 @@ class UserViewTest(TestCase):
             slug='test_slug',
             description='test_description',
         )
+        cls.test_user = User.objects.create_user(
+            username='Test_username')
         cls.post = Post.objects.create(
-            author=User.objects.create_user(username='auth'),
             text='test_text',
-            group=UserViewTest.group,
+            author=User.objects.get(username='Test_username'),
+            group=UserViewTest.group
         )
 
     def setUp(self):
         # Создаем неавторизованный пользователя
         self.guest_client = Client()
         # Создаем авторизованного пользователя
-        self.user = User.objects.create_user(username='Test_username')
+        self.user = self.test_user
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         for i in range(1, 15):
@@ -173,13 +175,11 @@ class UserViewTest(TestCase):
         self.assertEqual(len(response.context.get('page_obj')), 10)
 
     def test_second_page_profile_contains_ten_records(self):
-        """Проверка работы пагинатора на второй странице profile,
-        при создании пост на данной странице появляется.
-        """
+        """Проверка работы пагинатора на второй странице profile"""
         response = self.client.get(reverse(
             'posts:profile', args={self.post.author.username}) + '?page=2'
         )
-        self.assertEqual(len(response.context.get('page_obj')), 4)
+        self.assertEqual(len(response.context.get('page_obj')), 5)
 
     def test_additional_check_create_post_group_list(self):
         """Проверка, что при создании поста,

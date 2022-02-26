@@ -1,6 +1,7 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase, Client
 from http import HTTPStatus
+
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 
 from ..models import Group, Post
 
@@ -16,10 +17,6 @@ class UserURLTest(TestCase):
             slug='test_slug',
             description='Тестовое описание',
         )
-        # cls.post = Post.objects.create(
-        #     author=User.objects.create_user(username='auth'),
-        #     text='test_text',
-        # )
 
     def setUp(self):
         # Создаем неавторизованный пользователя
